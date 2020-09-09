@@ -13,16 +13,42 @@ def to(url):
   
 def go_home():
   driver.get(fready_url);
+
+def scan(string):
+  return driver.find_elements_by_xpath("//*[contains(text(),'" + string + "')]")
+def bclick(string):
+  scan(string)[0].click()
+
+def sign_in(user):
+  if signed_in_(test_user['name']):
+    go_home()
+  else:
+    time.sleep(.3)
+    action = ActionChains(driver)
+    action.send_keys(user['email'] + Keys.TAB + "123456789" + Keys.ENTER).perform()
+  
   
 def sign_out():
-  go_home()
-  time.sleep(.4)
-  to('/myprofile')
-  time.sleep(.6)
-  driver.find_elements_by_xpath("//*[contains(text(), 'Log Out')]")[0].click()
-
+  if (signed_in_(test_user['name']) or signed_in_('Luna 2')):
+    go_home()
+    time.sleep(.4)
+    to('/myprofile')
+    time.sleep(.6)
+    bclick('Log Out')
+  
+def pretty_print_tests(tests):
+  for key, value in tests.items():
+    if value:
+      click.secho(key + " : " + 'PASS', fg='green')
+    else:
+      click.secho(key + " : " + 'FAIL', fg='red') 
+      
 def screen(filename):
   driver.get_screenshot_as_file(test_folder + "/" + filename + ".png")
+
+def keyz(string):
+  action = ActionChains(driver)
+  action.send_keys(string).perform()
 
 def fill_sign_up(name, email):
   action = ActionChains(driver)
@@ -31,14 +57,10 @@ def fill_sign_up(name, email):
 def signed_in_(name):
   to('/myprofile')
   time.sleep(.2)
-  return len(driver.find_elements_by_xpath("//*[contains(text(),' " + name + " ')]")) > 0
+  return len(scan(name)) > 0
  
  
 # trip tests
-def signoutlogintest():
-  sign_out()
-  time.sleep(5)
-  return signed_in_(test_user['name'])
 
 def test_sign_out():
   if (signed_in_(test_user['name'])):
@@ -46,18 +68,21 @@ def test_sign_out():
     time.sleep(.7)
     to('/myprofile')
     time.sleep(.6)
-    driver.find_elements_by_xpath("//*[contains(text(), 'Log Out')]")[0].click() 
+    bclick('Log Out')
     time.sleep(.5)
     
-  return len(driver.find_elements_by_xpath("//*[contains(text(), 'Spend less time reading.')]")) > 0
+  return len(scan('Spend less time reading.')) > 0
 
 def test_log_in():
+  if (signed_in_(test_user['name'])):
+    go_home()
+    sign_out()
+    
   go_home()
-  driver.find_elements_by_xpath("//*[contains(text(),'Log In')]")[0].click()
-  time.sleep(.3)
-  action = ActionChains(driver)
-  action.send_keys(test_user['email'] + Keys.TAB + "123456789" + Keys.ENTER).perform()
+  bclick('Log In')
+  sign_in(test_user)
   time.sleep(.5)
+    
   return signed_in_(test_user['name'])
   
 def test_profile():
@@ -66,11 +91,11 @@ def test_profile():
   to('/myprofile')
   time.sleep(.6)
   screen('profile')
-  return len(driver.find_elements_by_xpath("//*[contains(text(),' " + test_user['name'] + " ')]")) > 0
+  return len(scan(test_user['name'])) > 0
  
 def test_sign_ups():
   go_home()
-  driver.find_elements_by_xpath("//*[contains(text(), 'Sign Up')]")[0].click()
+  bclick('Sign Up')
   time.sleep(1)
   # action = ActionChains(driver)
   # action.send_keys(test_user['name'] + Keys.TAB + test_user['email'] + Keys.TAB + "123456789" + Keys.TAB + "123456789" + Keys.ENTER).perform()
@@ -80,8 +105,6 @@ def test_sign_ups():
   time.sleep(1)
 
   return signed_in_(test_user['name'])
-
-
 
 def test_welcome_sign_up():
   sign_out()
@@ -94,23 +117,56 @@ def test_welcome_sign_up():
   time.sleep(.3)
   return signed_in_('Luna 2')
  
- 
-def pretty_print_tests(tests):
-  for key, value in tests.items():
-    if value:
-      click.secho(key + " : " + 'PASS', fg='green')
-    else:
-      click.secho(key + " : " + 'FAIL', fg='red') 
+def test_archive():
+  sign_in(test_user)
+  go_home()
+  driver.find_elements_by_xpath("//a[@href='/archive']")[0].click()
+  time.sleep(.5)
+  screen('archieve')
+  return len(scan('Archive')) > 0
 
-    
-    
+def test_splash():
+  go_home()
+  sign_out()
+  go_home()
+  time.sleep(.1)
+  screen('splash')
+  return len(scan('Spend less time reading.')) > 0
+
+def test_early_access():
+  sign_in(test_user)
+  go_home()
+  bclick('Books')
+  screen('Early Access page')
+  return len(scan(' Stay focused when reading your books. ')) > 1
+
+def test_read_article():
+  sign_in(test_user)
+  go_home()
+  bclick('Articles')
+  driver.find_elements_by_class_name("link_blokkkk")[0].click()
+  time.sleep(1)
+  screen('lector-1')
+  time.sleep(1)
+  screen('lector-2')
+  keyz(' ')
+  time.sleep(3)
+  screen('lector-3')
+  time.sleep(4)
+  return len(scan('speed'))   
+
+ 
 def run_tests():
   tests = {
     'normal sign up': test_sign_ups(),
     'profile': test_profile(),
     'sign out': test_sign_out(),
     'log in': test_log_in(),
-    'sign up from xfready': test_welcome_sign_up()
+    'sign up from xfready': test_welcome_sign_up(),
+    'archive': test_archive(),
+    'splash': test_splash(),
+    'early access': test_early_access(),
+    'read article': test_read_article()
   }
   print(" ") 
   click.secho(' - TEST RESULTS - ', bg='blue')
